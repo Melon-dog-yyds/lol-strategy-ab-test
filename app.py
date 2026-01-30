@@ -351,79 +351,41 @@ def show_basic_stats(engine: ABTestEngine):
 
 # 可视化胜率对比
 def plot_win_rate_comparison(engine: ABTestEngine, result: Dict):
-    """可视化胜率对比"""
+    """可视化胜率对比 - 使用Plotly"""
     st.header("📈 可视化分析")
     
     # 创建两列布局
     col1, col2 = st.columns(2)
     
     with col1:
-        # 胜率柱状图
-        fig1, ax1 = plt.subplots(figsize=(8, 5))
-        strategies = [engine.name_a, engine.name_b]
-        win_rates = [engine.win_rate_a * 100, engine.win_rate_b * 100]
-        
-        bars = ax1.bar(strategies, win_rates, color=['#4285F4', '#34A853'], alpha=0.8)
-        ax1.set_ylabel('胜率 (%)', fontsize=12)
-        ax1.set_title('策略胜率对比', fontsize=14, fontweight='bold')
-        ax1.grid(True, alpha=0.3, axis='y')
-        
-        # 在柱子上添加数值标签
-        for bar, rate in zip(bars, win_rates):
-            height = bar.get_height()
-            ax1.text(bar.get_x() + bar.get_width()/2., height + 0.5,
-                    f'{rate:.2f}%', ha='center', va='bottom', fontweight='bold')
-        
-        st.pyplot(fig1)
-        plt.close(fig1)
+        # 使用Plotly创建胜率柱状图
+        from utils.visualization import create_win_rate_bar_chart
+        fig1 = create_win_rate_bar_chart(
+            engine.win_rate_a, engine.win_rate_b,
+            engine.name_a, engine.name_b
+        )
+        st.plotly_chart(fig1, use_container_width=True)
     
     with col2:
-        # 置信区间图（如果可用）
+        # 根据是否有置信区间显示不同的图表
         if 'ci_lower' in result and 'ci_upper' in result:
-            fig2, ax2 = plt.subplots(figsize=(8, 5))
-            
-            diff = (engine.win_rate_b - engine.win_rate_a) * 100
-            ci_lower = result['ci_lower'] * 100
-            ci_upper = result['ci_upper'] * 100
-            
-            # 绘制点和误差线
-            ax2.errorbar(0, diff, yerr=[[abs(diff-ci_lower)], [abs(ci_upper-diff)]], 
-                        fmt='o', color='#EA4335', markersize=10, capsize=10, capthick=2)
-            
-            # 添加参考线
-            ax2.axhline(y=0, color='gray', linestyle='--', alpha=0.5)
-            
-            ax2.set_xlim(-0.5, 0.5)
-            ax2.set_xticks([])
-            ax2.set_ylabel('胜率差异 (%)', fontsize=12)
-            ax2.set_title('胜率差异的置信区间', fontsize=14, fontweight='bold')
-            ax2.grid(True, alpha=0.3)
-            
-            # 添加文本
-            ax2.text(0, diff+1, f'{diff:+.2f}%', ha='center', va='bottom', fontweight='bold')
-            ax2.text(0, ci_lower-1, f'{ci_lower:.2f}%', ha='center', va='top', fontsize=10)
-            ax2.text(0, ci_upper+1, f'{ci_upper:.2f}%', ha='center', va='bottom', fontsize=10)
-            
-            st.pyplot(fig2)
-            plt.close(fig2)
+            from utils.visualization import create_confidence_interval_plot
+            fig2 = create_confidence_interval_plot(
+                diff=engine.win_rate_b - engine.win_rate_a,
+                ci_lower=result['ci_lower'],
+                ci_upper=result['ci_upper'],
+                name_a=engine.name_a,
+                name_b=engine.name_b,
+                alpha=result.get('alpha', 0.05)
+            )
+            st.plotly_chart(fig2, use_container_width=True)
         else:
-            # 样本量对比图
-            fig2, ax2 = plt.subplots(figsize=(8, 5))
-            sample_sizes = [engine.n_a, engine.n_b]
-            
-            bars = ax2.bar(strategies, sample_sizes, color=['#FBBC05', '#EA4335'], alpha=0.8)
-            ax2.set_ylabel('样本量', fontsize=12)
-            ax2.set_title('样本量对比', fontsize=14, fontweight='bold')
-            ax2.grid(True, alpha=0.3, axis='y')
-            
-            # 在柱子上添加数值标签
-            for bar, size in zip(bars, sample_sizes):
-                height = bar.get_height()
-                ax2.text(bar.get_x() + bar.get_width()/2., height + max(sample_sizes)*0.01,
-                        f'{size:,}', ha='center', va='bottom', fontweight='bold')
-            
-            st.pyplot(fig2)
-            plt.close(fig2)
+            from utils.visualization import create_sample_size_chart
+            fig2 = create_sample_size_chart(
+                engine.n_a, engine.n_b,
+                engine.name_a, engine.name_b
+            )
+            st.plotly_chart(fig2, use_container_width=True)
     
     st.markdown("---")
 
